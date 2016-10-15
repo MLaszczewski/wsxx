@@ -7,7 +7,10 @@
 #ifndef EMSCRIPTEN
   #include <stdio.h>
   #define wsxx_log(...) printf(__VA_ARGS__)
+  #define EMSCRIPTEN
 #endif
+
+
 
 #ifdef EMSCRIPTEN
 
@@ -19,40 +22,52 @@ WebSocket::WebSocket(std::string url, openCallback onOpenp, messageCallback onMe
   : onMessage(onMessagep), onOpen(onOpenp), onClose(onClosep) {
    socketId = ++lastSocketId;
   EM_ASM_ARGS({
-    var cxx = $2
-    var ws = new WebSocket(Pointer_stringify($0))
-    ws.binaryType='arraybuffer'
+    var cxx = $2;
+    var urlPointer = $0;
+    var url = Module.Pointer_stringify( urlPointer );
+    var ws = new WebSocket( url );
+    ws.binaryType='arraybuffer';
 
     ws.onopen = function() {
-      Module._wsxx_handle_open(cxx)
-    }
+      Module._wsxx_handle_open(cxx);
+    };
     ws.onclose = function(ev) {
-      var reason = Module.allocate(Module.intArrayFromString(ev.reason), 'i8', Module.ALLOC_NORMAL)
-      Module._wsxx_handle_close(cxx, ev.code, reason, ev.wasClean)
-      Module._free(reason)
-    }
+      var reason = Module.allocate(Module.intArrayFromString(ev.reason), 'i8', Module.ALLOC_NORMAL);
+      Module._wsxx_handle_close(cxx, ev.code, reason, ev.wasClean);
+      Module._free(reason);
+    };
     ws.onerror = function() {
-      Module._wsxx_handle_error(cxx)
-    }
+      Module._wsxx_handle_error(cxx);
+    };
     ws.onmessage = function(ev) {
       if(ev.data instanceof ArrayBuffer) {
         /// TODO: persistent buffer optimization
-        var size = ev.data.byteLength
-        var src = new Uint8Buffer(ev.data)
-        var destPtr = Module._malloc(size)
-        var dest = new Uint8Array(Module.HEAPU8.buffer, destPtr, size)
-        dest.set(heapData)
-        Module._wsxx_handle_binary_message(cxx, dest, size)
-        Module._free(dest)
+        var size = ev.data.byteLength;
+        var src = new Uint8Array(ev.data);
+        var destPtr = Module._malloc(size);
+        var dest = new Uint8Array(Module.HEAPU8.buffer, destPtr, size);
+        dest.set(src);
+        try {
+          Module._wsxx_handle_binary_message(cxx, destPtr, size);
+        } catch(e) {
+          console.error(e);
+          console.error(e.stack);
+        }
+        Module._free(destPtr);
       } else {
-        var text = Module.allocate(Module.intArrayFromString(ev.data), 'i8', Module.ALLOC_NORMAL)
-        Module._wsxx_handle_text_message(cxx, text)
-        Module._free(text)
+        var text = Module.allocate(Module.intArrayFromString(ev.data), 'i8', Module.ALLOC_NORMAL);
+        try {
+          Module._wsxx_handle_text_message(cxx, text);
+        } catch(e) {
+          console.error(e);
+          console.error(e.stack);
+        }
+        Module._free(text);
       }
-    }
+    };
 
-    window.WSXX = window.WSXX || []
-    window.WSXX[$1] = ws
+    window.WSXX = window.WSXX || [];
+    window.WSXX[$1] = ws; //*/
   }, url.c_str(), socketId, this);
 }
 WebSocket::WebSocket(std::string url) {
@@ -75,15 +90,15 @@ void WebSocket::close() {
 void WebSocket::send(std::string data, PacketType type) {
   if(type == PacketType::Text) {
     EM_ASM_ARGS({
-      window.WSXX[$0].send(Pointer_stringify($1))
+      window.WSXX[$0].send(Pointer_stringify($1));
     }, socketId, data.c_str());
   }
   if(type == PacketType::Binary) {
     EM_ASM_ARGS({
-      var buff = new Uint8Buffer($1)
-      var heapData = new Uint8Array(Module.HEAPU8.buffer, $2, $1)
-      buff.set(heapData)
-      window.WSXX[$0].send(buff.buffer)
+      var buff = new Uint8Array($1);
+      var heapData = new Uint8Array(Module.HEAPU8.buffer, $2, $1);
+      buff.set(heapData);
+      window.WSXX[$0].send(buff.buffer);
     }, socketId, data.size(), data.c_str());
   }
 }
