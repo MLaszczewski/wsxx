@@ -3,7 +3,7 @@ project(FastGFX)
 
 include_directories(include)
 
-set(SRC_ROOT ./)
+set(SRC_ROOT .)
 aux_source_directory(${SRC_ROOT}src SRC_LIST)
 set(SOURCE_FILES ${SRC_LIST})
 

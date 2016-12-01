@@ -7,7 +7,6 @@
 #ifndef EMSCRIPTEN
   #include <stdio.h>
   #define wsxx_log(...) printf(__VA_ARGS__)
-  #define EMSCRIPTEN
 #endif
 
 
