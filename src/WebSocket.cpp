@@ -118,6 +118,11 @@ WebSocket::State WebSocket::getState() {
     return window.WSXX[$0].readyState
   }, socketId);
 }
+unsigned int WebSocket::bufferedAmount() {
+  return (unsigned int)EM_ASM_INT({
+    return window.WSXX[$0].bufferedAmount
+  }, socketId);
+}
 
 }
 
