@@ -46,6 +46,7 @@ namespace wsxx {
     void close();
     void send(std::string data, PacketType type);
     State getState();
+    unsigned int bufferedAmount();
 
     void setOnOpen(openCallback callback);
     void setOnClose(closeCallback callback);
