@@ -4,12 +4,6 @@
   #include <emscripten.h>
   #define wsxx_log(...) emscripten_log(EM_LOG_ERROR, __VA_ARGS__)
 #endif
-#ifndef EMSCRIPTEN
-  #include <stdio.h>
-  #define wsxx_log(...) printf(__VA_ARGS__)
-#endif
-
-
 
 #ifdef EMSCRIPTEN
 
@@ -73,18 +67,18 @@ WebSocket::WebSocket(std::string url) {
   WebSocket(url,nullptr,nullptr,nullptr);
 }
 WebSocket::~WebSocket() {
-  close();
+  closeConnection();
   EM_ASM_ARGS({
     delete window.WSXX[$0]
   }, socketId);
 }
-void WebSocket::close(unsigned short code, std::string reason) {
+void WebSocket::closeConnection(unsigned short code, std::string reason) {
   EM_ASM_ARGS({
     window.WSXX[$0].close($1,Pointer_stringify($2))
   }, socketId, code, reason.c_str());
 }
-void WebSocket::close() {
-  close(1000, "");
+void WebSocket::closeConnection() {
+  closeConnection(1000, "");
 }
 void WebSocket::send(std::string data, PacketType type) {
   if(type == PacketType::Text) {
