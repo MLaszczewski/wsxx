@@ -393,7 +393,7 @@ namespace wsxx {
         } else if(readPhase == 1) {
           std::uint16_t size;
           memcpy((char*)&size, buffer, 2);
-          dataSize = size;
+          dataSize = ntohs(size);
           if(mask) {
             more = 4;
             readPhase = 3;
