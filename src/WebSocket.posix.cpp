@@ -15,6 +15,7 @@
 #include <sstream>
 #include <algorithm>
 #include <unistd.h>
+#include <signal.h>
 
 #ifndef __ANDROID
 #include <stdio.h>
@@ -23,18 +24,17 @@
 #define wsxx_log(...) printf(__VA_ARGS__)
 #endif
 
+#ifdef __linux__
+#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
+#endif
+
 #ifdef __ANDROID
 #define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 
 #include <android/log.h>
 #define wsxx_log(...) __android_log_print(ANDROID_LOG_INFO, "WSXX", __VA_ARGS__);
-#endif
-
-#ifdef __linux__
-#include <signal.h>
-#define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
-#define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
 #endif
 
 namespace wsxx {
@@ -399,7 +399,7 @@ namespace wsxx {
         } else if(readPhase == 1) {
           std::uint16_t size;
           memcpy((char*)&size, buffer, 2);
-          dataSize = ntohs(size);
+          dataSize = size;
           if(mask) {
             more = 4;
             readPhase = 3;
