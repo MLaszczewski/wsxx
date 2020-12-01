@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.3)
-project(FastGFX)
+project(WsGFX)
 
 include_directories(include)
 
