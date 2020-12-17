@@ -43,11 +43,13 @@ namespace wsxx {
   };
 
   void WebSocket::handleMessage(WebSocket::PacketType opcode, bool fin, const char* data, int dataSize) {
+    printf("HANDLE MESSAGE %x\n", opcode);
     if(opcode == PacketType::Ping) {
       Packet pong;
       pong.data = std::string(data, dataSize);
       pong.type = PacketType::Pong;
       queue.enqueue(pong);
+      wsxx_log("GOT PING!\n");
       return;
     }
     if(opcode == PacketType::Pong) {
@@ -270,8 +272,8 @@ namespace wsxx {
           continue;
         }
 
-/*        wsxx_log("SEND PACKET LEN = %d, HDR: %x %x %x %x", (int)packet.data.size(),
-                 packet.data.data()[0], packet.data.data()[1], packet.data.data()[2], packet.data.data()[3]);*/
+        wsxx_log("SEND PACKET LEN = %d, TYPE: %d HDR: %x %x %x %x\n", (int)packet.data.size(), packet.type,
+                 packet.data.data()[0], packet.data.data()[1], packet.data.data()[2], packet.data.data()[3]);//*/
 
         std::uint64_t dataSize = packet.data.size();
         int frameSize = 2; // header
@@ -356,21 +358,23 @@ namespace wsxx {
 
       //wsxx_log("READER IN PHASE %d\n", readPhase);
 
-      //wsxx_log("READ %d p %d\n", sock, more);
-      int r = read(sock, p, more);
+      if(more > 0) {
+        //wsxx_log("READ %d p %d\n", sock, more);
+        int r = read(sock, p, more);
 
-      //wsxx_log("READED %d BYTES\n", r);
+        //wsxx_log("READED %d BYTES\n", r);
 
-      if(r <= 0) {
-        wsxx_log("Disconnected %d\n", errno);
-        state = State::Closed;
-        if(onClose) onClose(0, "closed", true);
-        close(sock);
-        return;
+        if (r <= 0) {
+          wsxx_log("Disconnected %d\n", errno);
+          state = State::Closed;
+          if (onClose) onClose(0, "closed", true);
+          close(sock);
+          return;
+        }
+
+        more -= r;
+        p += r;
       }
-
-      more -= r;
-      p += r;
 
       if(more == 0) {
         if(readPhase == 0) {
@@ -378,7 +382,7 @@ namespace wsxx {
           opcode = buffer[0]&0x0F;
           fin = buffer[0]&0x80;
           mask = buffer[1]&0x80;
-          //wsxx_log("HDR Payload length %d\n", payloadLength);
+          wsxx_log("HDR Payload length %d\n", payloadLength);
           if(payloadLength == 126) {
             more = 2;
             readPhase = 1;
@@ -399,7 +403,8 @@ namespace wsxx {
         } else if(readPhase == 1) {
           std::uint16_t size;
           memcpy((char*)&size, buffer, 2);
-          dataSize = size;
+          //wsxx_log("SHORT payload length %d\n", size);
+          dataSize = ntohs(size);
           if(mask) {
             more = 4;
             readPhase = 3;
@@ -412,7 +417,7 @@ namespace wsxx {
           memcpy((char*)&size, buffer, 8);
           size = ntohll(size);
           /*wsxx_log("LONG payload length %x %x %x %x %x %x %x %x = %d\n",
-                   buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], (int)size);*/
+                   buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7], (int)size);//*/
           dataSize = size;
           if(mask) {
             more = 4;
