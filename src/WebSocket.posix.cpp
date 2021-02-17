@@ -43,7 +43,7 @@ namespace wsxx {
   };
 
   void WebSocket::handleMessage(WebSocket::PacketType opcode, bool fin, const char* data, int dataSize) {
-    printf("HANDLE MESSAGE %x\n", opcode);
+    wsxx_log("HANDLE MESSAGE %x  waitingForMore=%d  fin=%d\n", opcode, waitingForMore, fin);
     if(opcode == PacketType::Ping) {
       Packet pong;
       pong.data = std::string(data, dataSize);
@@ -68,8 +68,7 @@ namespace wsxx {
         concatBuffer.write(data, dataSize);
         if(fin) {
           waitingForMore = false;
-          concatBuffer.write(data, dataSize);
-          if(onMessage) onMessage(concatBuffer.str(), opcode);
+          if(onMessage) onMessage(concatBuffer.str(), continuationOpcode);
           concatBuffer.str("");
         }
         return;
@@ -83,6 +82,7 @@ namespace wsxx {
         } else {
           concatBuffer.write(data, dataSize);
           waitingForMore = true;
+          continuationOpcode = opcode;
         }
         return;
       }
@@ -403,7 +403,7 @@ namespace wsxx {
         } else if(readPhase == 1) {
           std::uint16_t size;
           memcpy((char*)&size, buffer, 2);
-          //wsxx_log("SHORT payload length %d\n", size);
+          wsxx_log("SHORT payload length %d, mask %d\n", size, mask);
           dataSize = ntohs(size);
           if(mask) {
             more = 4;

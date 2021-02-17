@@ -91,6 +91,7 @@ namespace wsxx {
     moodycamel::ConcurrentQueue<Packet> queue;
 
     bool waitingForMore;
+    PacketType continuationOpcode;
     std::ostringstream concatBuffer;
 
     void handleMessage(PacketType opcode, bool fin, const char* data, int dataSize);
